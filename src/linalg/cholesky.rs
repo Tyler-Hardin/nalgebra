@@ -38,6 +38,15 @@ where
 {
 }
 
+impl<T: SimdComplexField, D: Dim> std::ops::MulAssign<T::SimdRealField> for Cholesky<T, D>
+where
+    DefaultAllocator: Allocator<T, D, D>,
+{
+    fn mul_assign(&mut self, s: T::SimdRealField) {
+        self.chol.scale_mut(s.simd_sqrt());
+    }
+}
+
 impl<T: SimdComplexField, D: Dim> Cholesky<T, D>
 where
     DefaultAllocator: Allocator<T, D, D>,
@@ -272,6 +281,20 @@ where
         ShapeConstraint: SameNumberOfRows<R2, D>,
     {
         Self::xx_rank_one_update(&mut self.chol, &mut x.clone_owned(), sigma)
+    }
+
+    /// Given the Cholesky decomposition of a matrix `M`, a scalar `sigma` and a vector `v`,
+    /// performs a rank one update such that we end up with the decomposition of `M + sigma * (v * v.adjoint())`.
+    ///
+    /// `x` is used for scratch.
+    #[inline]
+    pub fn rank_one_update_mut<R2: Dim, S2>(&mut self, x: &mut Vector<T, R2, S2>, sigma: T::RealField)
+    where
+        S2: Storage<T, R2, U1> + StorageMut<T, R2>,
+        DefaultAllocator: Allocator<T, R2, U1>,
+        ShapeConstraint: SameNumberOfRows<R2, D>,
+    {
+        Self::xx_rank_one_update(&mut self.chol, x, sigma)
     }
 
     /// Updates the decomposition such that we get the decomposition of a matrix with the given column `col` in the `j`th position.
